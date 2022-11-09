@@ -247,13 +247,11 @@ void whisper_print_usage(int argc, char **argv, const whisper_params &params)
 std::string struct_to_json(whisper_token_data data, const char *text)
 {
     std::string str_text = text;
+    std::replace(str_text.begin(), str_text.end(), '"', '\'');
     std::string json = "{";
     json += "\"id\":\"" + std::to_string(data.id) + "\",";
     json += "\"t\":\"" + str_text + "\",";
-    json += "\"p\":\"" + std::to_string(data.p) + "\",";
-    json += "\"pt\":\"" + std::to_string(data.pt) + "\",";
-    json += "\"ptsum\":\"" + std::to_string(data.ptsum) + "\",";
-    json += "\"vlen\":\"" + std::to_string(data.vlen) + "\"";
+    json += "\"p\":" + std::to_string(data.p);
     json += "}";
 
     return json;
@@ -363,7 +361,7 @@ bool output_txt(struct whisper_context *ctx, const char *fname)
     return true;
 }
 
-bool output_json(struct whisper_context *ctx, const char *fname)
+bool output_json(struct whisper_context *ctx, const char *fname, const std::string fname_input)
 {
     std::ofstream fout(fname);
     if (!fout.is_open())
@@ -373,9 +371,12 @@ bool output_json(struct whisper_context *ctx, const char *fname)
     }
 
     fprintf(stderr, "%s: saving output to '%s'\n", __func__, fname);
-    fout << "{";
-    fout << "\"tokens\":";
-    fout << "[";
+    std::string json = "{";
+    // Add file name
+    json += "\"file_name\":\"" + fname_input + "\",";
+
+    json += "\"tokens\":";
+    json += "[";
 
     const int n_segments = whisper_full_n_segments(ctx);
     for (int i = 0; i < n_segments; ++i)
@@ -386,22 +387,26 @@ bool output_json(struct whisper_context *ctx, const char *fname)
 
         for (int j = 0; j < n_tokens; ++j)
         {
-            // const whisper_token id = whisper_full_get_token_id(ctx, i, j);
+            // Skip special tokens
+            const whisper_token id = whisper_full_get_token_id(ctx, i, j);
+            if (id >= whisper_token_eot(ctx))
+            {
+                continue;
+            }
+
             const char *text = whisper_full_get_token_text(ctx, i, j);
             const whisper_token_data token_data = whisper_full_get_token_data(ctx, i, j);
             // Create a JSON string of token_data
             const std::string token_data_json = struct_to_json(token_data, text);
-            fout << token_data_json;
+            json += token_data_json;
 
-            if (j < n_tokens - 1)
-            {
-                fout << ",";
-            }
+            json += ",";
         }
     }
-    fout << "]";
+    json.pop_back();
+    json += "]}";
 
-    fout << "}";
+    fout << json;
 
     return true;
 }
@@ -757,7 +762,9 @@ int main(int argc, char **argv)
             if (params.output_json)
             {
                 const auto fname_json = fname_inp + ".json";
-                output_json(ctx, fname_json.c_str());
+                const std::string base_filename = fname_inp.substr(fname_inp.find_last_of("/") + 1);
+
+                output_json(ctx, fname_json.c_str(), base_filename);
             }
 
             // output to VTT file
