@@ -398,10 +398,10 @@ bool output_json(struct whisper_context *ctx, const char *fname)
                 fout << ",";
             }
         }
-        fout << "]";
-
-        fout << "}";
     }
+    fout << "]";
+
+    fout << "}";
 
     return true;
 }
