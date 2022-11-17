@@ -84,7 +84,7 @@ struct whisper_params
     bool no_timestamps = false;
 
     std::string language = "en";
-    std::string model = "models/ggml-base.en.bin";
+    std::string model = "models/ggml-medium.en.bin";
 
     std::vector<std::string> fname_inp = {};
 };
@@ -154,7 +154,7 @@ bool whisper_params_parse(int argc, char **argv, whisper_params &params)
             {
                 fprintf(stderr, "error: unknown language '%s'\n", params.language.c_str());
                 whisper_print_usage(argc, argv, params);
-                exit(0);
+                exit(1);
             }
         }
         else if (arg == "-otxt" || arg == "--output-txt")
@@ -206,7 +206,7 @@ bool whisper_params_parse(int argc, char **argv, whisper_params &params)
         {
             fprintf(stderr, "error: unknown argument: %s\n", arg.c_str());
             whisper_print_usage(argc, argv, params);
-            exit(0);
+            exit(1);
         }
     }
 
@@ -249,7 +249,6 @@ std::string struct_to_json(whisper_token_data data, const char *text)
     std::string str_text = text;
     std::replace(str_text.begin(), str_text.end(), '"', '\'');
     std::string json = "{";
-    json += "\"id\":\"" + std::to_string(data.id) + "\",";
     json += "\"t\":\"" + str_text + "\",";
     json += "\"p\":" + std::to_string(data.p);
     json += "}";
@@ -361,7 +360,7 @@ bool output_txt(struct whisper_context *ctx, const char *fname)
     return true;
 }
 
-bool output_json(struct whisper_context *ctx, const char *fname, const std::string fname_input)
+bool output_json(struct whisper_context *ctx, const char *fname, const std::string fname_input, const std::string lang)
 {
     std::ofstream fout(fname);
     if (!fout.is_open())
@@ -374,7 +373,7 @@ bool output_json(struct whisper_context *ctx, const char *fname, const std::stri
     std::string json = "{";
     // Add file name
     json += "\"file_name\":\"" + fname_input + "\",";
-
+    json += "\"lang\":\"" + lang + "\",";
     json += "\"tokens\":";
     json += "[";
 
@@ -764,7 +763,7 @@ int main(int argc, char **argv)
                 const auto fname_json = fname_inp + ".json";
                 const std::string base_filename = fname_inp.substr(fname_inp.find_last_of("/") + 1);
 
-                output_json(ctx, fname_json.c_str(), base_filename);
+                output_json(ctx, fname_json.c_str(), base_filename, params.language);
             }
 
             // output to VTT file

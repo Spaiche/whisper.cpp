@@ -36,11 +36,9 @@ import os
 import sys
 import struct
 import json
-import code
 import torch
 import numpy as np
 
-from transformers import GPTJForCausalLM
 from transformers import GPT2TokenizerFast
 
 # ref: https://github.com/openai/whisper/blob/8cf36f3508c9acd341a45eb2364239a3d81458b9/whisper/tokenizer.py#L10-L110
@@ -146,7 +144,7 @@ LANGUAGES = {
     "su": "sundanese",
 }
 
-# ref: https://github.com/openai/whisper/blob/8cf36f3508c9acd341a45eb2364239a3d81458b9/whisper/tokenizer.py#L273-L292
+
 def build_tokenizer(path_to_whisper_repo: str, name: str = "gpt2"):
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     path = os.path.join(path_to_whisper_repo, "whisper/assets", name)
@@ -166,6 +164,7 @@ def build_tokenizer(path_to_whisper_repo: str, name: str = "gpt2"):
     tokenizer.add_special_tokens(dict(additional_special_tokens=specials))
     return tokenizer
 
+
 # ref: https://github.com/openai/gpt-2/blob/master/src/encoder.py
 def bytes_to_unicode():
     """
@@ -177,33 +176,39 @@ def bytes_to_unicode():
     To avoid that, we want lookup tables between utf-8 bytes and unicode strings.
     And avoids mapping to whitespace/control characters the bpe code barfs on.
     """
-    bs = list(range(ord("!"), ord("~")+1))+list(range(ord("¡"), ord("¬")+1))+list(range(ord("®"), ord("ÿ")+1))
+    bs = (
+        list(range(ord("!"), ord("~") + 1))
+        + list(range(ord("¡"), ord("¬") + 1))
+        + list(range(ord("®"), ord("ÿ") + 1))
+    )
     cs = bs[:]
     n = 0
     for b in range(2**8):
         if b not in bs:
             bs.append(b)
-            cs.append(2**8+n)
+            cs.append(2**8 + n)
             n += 1
     cs = [chr(n) for n in cs]
     return dict(zip(bs, cs))
 
 
 if len(sys.argv) < 4:
-    print("Usage: convert-pt-to-ggml.py model.pt path-to-whisper-repo dir-output [use-f32]\n")
+    print(
+        "Usage: convert-pt-to-ggml.py model.pt path-to-whisper-repo dir-output [use-f32]\n"
+    )
     sys.exit(1)
 
-fname_inp   = sys.argv[1]
+fname_inp = sys.argv[1]
 dir_whisper = sys.argv[2]
-dir_out     = sys.argv[3]
+dir_out = sys.argv[3]
 
 # try to load PyTorch binary data
 try:
     model_bytes = open(fname_inp, "rb").read()
     with io.BytesIO(model_bytes) as fp:
         checkpoint = torch.load(fp, map_location="cpu")
-except:
-    print("Error: failed to load PyTorch model file: %s" % fname_inp)
+except Exception as e:
+    print(f"Error: failed to load PyTorch model file: {fname_inp}: {e}")
     sys.exit(1)
 
 hparams = checkpoint["dims"]
@@ -211,24 +216,24 @@ print("hparams:", hparams)
 
 list_vars = checkpoint["model_state_dict"]
 
-#print(list_vars['encoder.positional_embedding'])
-#print(list_vars['encoder.conv1.weight'])
-#print(list_vars['encoder.conv1.weight'].shape)
+# print(list_vars['encoder.positional_embedding'])
+# print(list_vars['encoder.conv1.weight'])
+# print(list_vars['encoder.conv1.weight'].shape)
 
 # load mel filters
 n_mels = hparams["n_mels"]
 with np.load(os.path.join(dir_whisper, "whisper/assets", "mel_filters.npz")) as f:
     filters = torch.from_numpy(f[f"mel_{n_mels}"])
-    #print (filters)
+    # print (filters)
 
-#code.interact(local=locals())
+# code.interact(local=locals())
 
 multilingual = hparams["n_vocab"] == 51865
 tokenizer = build_tokenizer(dir_whisper, multilingual and "multilingual" or "gpt2")
 
-#print(tokenizer)
-#print(tokenizer.name_or_path)
-#print(len(tokenizer.additional_special_tokens))
+# print(tokenizer)
+# print(tokenizer.name_or_path)
+# print(len(tokenizer.additional_special_tokens))
 dir_tokenizer = tokenizer.name_or_path
 
 # output in the same directory as the model
@@ -245,7 +250,7 @@ if len(sys.argv) > 4:
 
 fout = open(fname_out, "wb")
 
-fout.write(struct.pack("i", 0x67676d6c)) # magic: ggml in hex
+fout.write(struct.pack("i", 0x67676D6C))  # magic: ggml in hex
 fout.write(struct.pack("i", hparams["n_vocab"]))
 fout.write(struct.pack("i", hparams["n_audio_ctx"]))
 fout.write(struct.pack("i", hparams["n_audio_state"]))
@@ -266,7 +271,7 @@ for i in range(filters.shape[0]):
         fout.write(struct.pack("f", filters[i][j]))
 
 byte_encoder = bytes_to_unicode()
-byte_decoder = {v:k for k, v in byte_encoder.items()}
+byte_decoder = {v: k for k, v in byte_encoder.items()}
 
 fout.write(struct.pack("i", len(tokens)))
 
@@ -280,23 +285,24 @@ for name in list_vars.keys():
     print("Processing variable: " + name + " with shape: ", data.shape)
 
     # reshape conv bias from [n] to [n, 1]
-    if name == "encoder.conv1.bias" or \
-       name == "encoder.conv2.bias":
+    if name == "encoder.conv1.bias" or name == "encoder.conv2.bias":
         data = data.reshape(data.shape[0], 1)
         print("  Reshaped variable: " + name + " to shape: ", data.shape)
 
-    n_dims = len(data.shape);
+    n_dims = len(data.shape)
 
     # looks like the whisper models are in f16 by default
     # so we need to convert the small tensors to f32 until we fully support f16 in ggml
     # ftype == 0 -> float32, ftype == 1 -> float16
-    ftype = 1;
+    ftype = 1
     if use_f16:
-        if n_dims < 2 or \
-                name == "encoder.conv1.bias"   or \
-                name == "encoder.conv2.bias"   or \
-                name == "encoder.positional_embedding" or \
-                name == "decoder.positional_embedding":
+        if (
+            n_dims < 2
+            or name == "encoder.conv1.bias"
+            or name == "encoder.conv2.bias"
+            or name == "encoder.positional_embedding"
+            or name == "decoder.positional_embedding"
+        ):
             ftype = 0
             data = data.astype(np.float32)
             print("  Converting to float32")
@@ -306,18 +312,18 @@ for name in list_vars.keys():
         data = data.astype(np.float32)
         ftype = 0
 
-    #if name.startswith("encoder"):
+    # if name.startswith("encoder"):
     #    if name.endswith("mlp.0.weight") or \
     #       name.endswith("mlp.2.weight"):
     #        print("  Transposing")
     #        data = data.transpose()
 
     # header
-    str = name.encode('utf-8')
+    str = name.encode("utf-8")
     fout.write(struct.pack("iii", n_dims, len(str), ftype))
     for i in range(n_dims):
         fout.write(struct.pack("i", data.shape[n_dims - 1 - i]))
-    fout.write(str);
+    fout.write(str)
 
     # data
     data.tofile(fout)

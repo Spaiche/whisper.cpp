@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "spaiche-whisper"
+version = "0.1.0"
+description = "Python environment for Spaiche-Whisper C++ inference Python wrapper and tools"
+authors = ["Clément Sicard <clement.sicard@icloud.com>"]
+readme = "README.md"
+packages = [{include = "spaiche_whisper"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+transformers = "^4.24.0"
+
+
+[tool.poetry.group.dev.dependencies]
+flake8 = "^5.0.4"
+black = "^22.10.0"
+cpplint = "^1.6.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
