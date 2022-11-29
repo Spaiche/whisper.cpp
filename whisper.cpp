@@ -16,7 +16,7 @@
 #include <vector>
 
 #define USE_FLASH_ATTN
-//#define USE_FLASH_FF
+// #define USE_FLASH_FF
 
 // available whisper models
 enum e_model
@@ -813,18 +813,18 @@ static bool whisper_model_load(const std::string &fname, whisper_context &wctx)
             model.type = e_model::MODEL_LARGE;
         }
 
-        fprintf(stderr, "%s: n_vocab       = %d\n", __func__, hparams.n_vocab);
-        fprintf(stderr, "%s: n_audio_ctx   = %d\n", __func__, hparams.n_audio_ctx);
-        fprintf(stderr, "%s: n_audio_state = %d\n", __func__, hparams.n_audio_state);
-        fprintf(stderr, "%s: n_audio_head  = %d\n", __func__, hparams.n_audio_head);
-        fprintf(stderr, "%s: n_audio_layer = %d\n", __func__, hparams.n_audio_layer);
-        fprintf(stderr, "%s: n_text_ctx    = %d\n", __func__, hparams.n_text_ctx);
-        fprintf(stderr, "%s: n_text_state  = %d\n", __func__, hparams.n_text_state);
-        fprintf(stderr, "%s: n_text_head   = %d\n", __func__, hparams.n_text_head);
-        fprintf(stderr, "%s: n_text_layer  = %d\n", __func__, hparams.n_text_layer);
-        fprintf(stderr, "%s: n_mels        = %d\n", __func__, hparams.n_mels);
-        fprintf(stderr, "%s: f16           = %d\n", __func__, hparams.f16);
-        fprintf(stderr, "%s: type          = %d\n", __func__, model.type);
+        // fprintf(stderr, "%s: n_vocab       = %d\n", __func__, hparams.n_vocab);
+        // fprintf(stderr, "%s: n_audio_ctx   = %d\n", __func__, hparams.n_audio_ctx);
+        // fprintf(stderr, "%s: n_audio_state = %d\n", __func__, hparams.n_audio_state);
+        // fprintf(stderr, "%s: n_audio_head  = %d\n", __func__, hparams.n_audio_head);
+        // fprintf(stderr, "%s: n_audio_layer = %d\n", __func__, hparams.n_audio_layer);
+        // fprintf(stderr, "%s: n_text_ctx    = %d\n", __func__, hparams.n_text_ctx);
+        // fprintf(stderr, "%s: n_text_state  = %d\n", __func__, hparams.n_text_state);
+        // fprintf(stderr, "%s: n_text_head   = %d\n", __func__, hparams.n_text_head);
+        // fprintf(stderr, "%s: n_text_layer  = %d\n", __func__, hparams.n_text_layer);
+        // fprintf(stderr, "%s: n_mels        = %d\n", __func__, hparams.n_mels);
+        // fprintf(stderr, "%s: f16           = %d\n", __func__, hparams.f16);
+        // fprintf(stderr, "%s: type          = %d\n", __func__, model.type);
 
         wctx.buf_model = new std::vector<uint8_t>();
         wctx.buf_model->resize(MEM_REQ_MODEL.at(model.type));
