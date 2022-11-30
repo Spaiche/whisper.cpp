@@ -27,7 +27,7 @@ endif
 # Compile flags
 #
 
-CFLAGS   = -I.              -O3 -std=c11  
+CFLAGS   = -I.              -O3 -std=c11
 CXXFLAGS = -I. -I./examples -O3 -std=c++11
 LDFLAGS  =
 
@@ -81,9 +81,9 @@ endif
 # Build library + main
 #
 
-main: examples/main/main.cpp ggml.o whisper.o
-	$(CXX) $(CXXFLAGS) examples/main/main.cpp whisper.o ggml.o -o main $(LDFLAGS)
-	./main -h
+spaiche: examples/main/main.cpp ggml.o whisper.o
+	$(CXX) $(CXXFLAGS) examples/main/main.cpp whisper.o ggml.o -o spaiche $(LDFLAGS)
+	./spaiche -h
 
 ggml.o: ggml.c ggml.h
 	$(CC)  $(CFLAGS)   -c ggml.c -o ggml.o
